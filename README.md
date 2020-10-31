@@ -27,7 +27,7 @@ Find a bug(or undesired results) ? do not hesitate to reach out
 
 
 ## License
-[MIT]()
+[MIT](https://github.com/Jenn-mawia/advertising-project-using-R/blob/main/LICENSE)
 
 
 Copyright (c) [2020] 
