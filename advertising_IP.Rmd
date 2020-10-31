@@ -1,0 +1,761 @@
+---
+title: "Advertising IP"
+author: "Jenipher Mawia"
+date: "10/29/2020"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+# 1. Defining the question
+
+**Perform extensive data cleaning and Exploratory Data Analysis on the following [data](http://bit.ly/IPAdvertisingData) and provide relevant conclusion and recommendation**
+
+##    1.1 Specifying the question
+- Find and deal with outliers, anomalies, and missing data within the dataset.
+- Perform  univariate and bivariate analysis.
+- From your insights provide a conclusion and recommendation.
+
+# 2. Defining the metrics for success
+This project will be considered a success if:
+
+- the above named specific questions are answered/accomplished
+
+# 3. Understanding the context
+A Kenyan entrepreneur has created an online cryptography course and would want to advertise it on her blog. She currently targets audiences originating from various countries. In the past, she ran ads to advertise a related course on the same blog and collected data in the process. She would now like to employ your services as a Data Science Consultant to help her identify which individuals are most likely to click on her ads. 
+
+# 4. Experimental Design Taken
+The following is the order in which I went about this project:
+
+- Data Sourcing and Understanding
+
+- Checking the data (head and tail, shape(number of records), datatypes)
+
+- Data cleaning procedures (handling null values,outliers, anomalies)
+
+- Exploratory data analysis (Univariate, Bivariate and Multivariate analyses)
+
+- Conclusion and recommendation
+
+# 5. Data Understanding
+## Reading the data
+```{r}
+advertising <- read.csv("advertising.csv")
+```
+
+## Checking the data
+Shape
+```{r}
+dim(advertising)
+```
+
+Head and Tail of the data
+
+Head
+```{r}
+# checking the first 6 rows in the data
+head(advertising)
+```
+
+Tail
+```{r}
+# checking the last 6 rows in the data
+tail(advertising)
+```
+
+Data Types
+```{r}
+#checking the datatypes of the columns
+str(advertising)
+```
+# 6. Appropriateness of the available data to answer the given question
+
+The data above contains 1000 entries and 10 columns(fields). The data contains numeric and character(string) datatypes. These columns include: "Daily time spent on Site", "age", "Daily internet usage", "country", "gender", "clicked on ad"(Y/N) etc. 
+
+All these fields can be used to determine the patterns of clients/customers and help to identify which individuals are most likely to click on ads. 
+
+Therefore, it can be concluded that the data available is appropriate and relevant to answer the given question. 
+
+# 7. Data Cleaning
+
+## Changing the column names format
+From the above outputs, we can see that the column names are not in the appropriate formats which needs to be changed. 
+
+```{r}
+# get column names
+colnames(advertising)
+```
+
+```{r}
+# rename the column names
+names(advertising)[names(advertising) == "Daily.Time.Spent.on.Site"] <- "daily_time_spent_on_site"
+names(advertising)[names(advertising) == "Age"] <- "age"
+names(advertising)[names(advertising) == "Area.Income"] <- "area_income"
+names(advertising)[names(advertising) == "Daily.Internet.Usage"] <- "daily_internet_usage"
+names(advertising)[names(advertising) == "Ad.Topic.Line"] <- "ad_topic_line"
+names(advertising)[names(advertising) == "City"] <- "city"
+names(advertising)[names(advertising) == "Male"] <- "male"
+names(advertising)[names(advertising) == "Country"] <- "country"
+names(advertising)[names(advertising) == "Timestamp"] <- "timestamp"
+names(advertising)[names(advertising) == "Clicked.on.Ad"] <- "clicked_on_ad"
+
+# preview changes made
+colnames(advertising)
+
+```
+
+## Missing data
+```{r}
+#check for missing values in the data per column
+colSums(is.na(advertising))
+```
+There aren't any missing values in the data
+
+## Duplicate entries
+```{r}
+# check for any duplicate entries
+duplicates <- advertising[duplicated(advertising),]
+duplicates
+```
+There aren't any duplicated entries in the data
+
+## Outliers
+Check for outliers.
+```{r}
+boxplot(advertising$daily_time_spent_on_site)
+```
+
+Get numerical columns to check for outliers from
+```{r}
+# check which of the columns has numeric data
+nums <- unlist(lapply(advertising, is.numeric)) 
+nums
+
+# output the numeric columns in form of a dataframe and check the top of the resulting dataframe
+numerical <- advertising[ , nums]
+head(numerical)
+#advertising[ , purrr::map_lgl(advertising, is.numeric)]
+
+#dplyr::select_if(advertising, is.numeric)
+
+```
+Only 6 columns out of the total 10 are numeric. The rest contain non-numeric data. 
+
+```{r}
+# make multiple boxplots of the numerical columns to check for any outliers present
+par(mfrow=c(2, 4))
+for (i in 1:length(numerical)) {
+        boxplot(numerical[,i], main=names(numerical[i]), type="l")
+}
+```
+
+There are a few outliers present in the column "area_income". 
+
+```{r}
+### outlier values in the area_income column
+outlier_values <- boxplot.stats(advertising$area_income)$out  
+boxplot(advertising$area_income, main="Area Income", boxwex=0.1)
+mtext(paste("Outliers: ", paste(outlier_values, collapse=", ")), cex=0.6)
+```
+
+## Dealing with outliers
+There are various ways of dealing with outliers:
+
+### Capping
+
+```{r}
+# capping
+#x <- advertising$Area.Income
+qnt <- quantile(advertising$area_income, probs=c(.25, .75), na.rm = T)
+caps <- quantile(advertising$area_income, probs=c(.05, .95), na.rm = T)
+H <- 1.5 * IQR(advertising$area_income, na.rm = T)
+advertising$area_income[advertising$area_income < (qnt[1] - H)] <- caps[1]
+advertising$area_income[advertising$area_income > (qnt[2] + H)] <- caps[2]
+```
+
+make a boxplot of the Area.Income column to see the changes made 
+```{r} 
+### outlier values in the Area.Income column
+outlier_values <- boxplot.stats(advertising$area_income)$out  
+boxplot(advertising$area_income, main="Area Income", boxwex=0.1)
+mtext(paste("Outliers: ", paste(outlier_values, collapse=", ")), cex=0.6)
+```
+
+Now we can make a plot of all numerical columns in the data once more to ensure no more outliers are present
+
+```{r}
+# reassign the "advertising" dataframe onto a new variable to avoid corrupting the original data
+data <-advertising
+```
+
+
+```{r}
+#outliers <- boxplot(advertising$Area.Income, plot=FALSE)$out
+#data <- data[-which(data$Area.Income %in% outliers),]
+
+```
+
+Getting numerical columns
+```{r}
+nums1 <- unlist(lapply(data, is.numeric)) 
+
+# output the numeric columns in form of a dataframe and check the top of the resulting dataframe
+numericals <- data[ , nums]
+head(numericals)
+```
+
+Plotting
+```{r}
+par(mfrow=c(2, 4))
+for (i in 1:length(numericals)) {
+        boxplot(numericals[,i], main=names(numericals[i]), type="l")
+}
+```
+
+No more outliers are present in the data.
+
+# Anomalies
+Anomalies are inconsistencies in the data and this can be checked for in many ways. These are rare items, events or observations which raise suspicions by differing significantly from the majority of the data.
+
+# Data-Type Conversion
+
+```{r}
+# checking the datatypes of each column
+str(data)
+```
+
+The columns "male"(representing the gender of the client-given by values 0 and 1) and "clicked_on_ad"(Y/N values represented by 0 and 1) are categorical values. It is possible to convert them to factor type so that they can have only two levels. 
+
+The "timestamp" column also requires to be converted into date-time format
+
+```{r}
+# change the datatypes of the two columns
+data$male <- as.factor(data$male)
+data$clicked_on_ad <- as.factor(data$clicked_on_ad)
+
+# check if the "male" column is a factor
+is.factor(data$male)
+```
+
+```{r}
+# create a temporary dataframe containing the data
+temp <- data 
+library(anytime)
+# converting the datatype of the column "timestamp"
+temp$timestamp <- anytime::anydate(temp$timestamp)
+# check the datatype of the column
+str(temp$timestamp)
+```
+As we can see above the anydate() function converts the characters that it recognizes to be part of a date into a date class and ignores all other characters in the string(the time function). We use the POSIXCt function instead
+
+```{r}
+# converting the datatype of the column "timestamp" on the original data
+data$timestamp <- as.POSIXct(data$timestamp, format="%Y-%m-%d %H:%M:%S")
+str(data$timestamp)
+```
+
+Then extract the year, month, day and hour from the timestamp column. The minute and second functions of time are not as important in the analysis. 
+```{r}
+# extract the year, month, day and hour from the timestamp column
+data$year <- format(data$timestamp, format="%Y")
+data$month <- format(data$timestamp, format="%m")
+data$day <- format(data$timestamp, format="%d")
+data$hour <- format(data$timestamp, format="%H")
+
+str(data)
+```
+
+
+```{r}
+#convert the new columns created to categorical values(factor)
+data$year <- as.factor(data$year)
+data$month <- as.factor(data$month)
+data$day <- as.factor(data$day)
+data$hour <- as.factor(data$hour)
+#check the datatypes of the resulting dataframe
+str(data)
+```
+
+- The "year" column has only one level;2016. This means the data was collected in the year 2016. 
+
+- The "month" column has 7 levels; months January to July. 
+
+- The "day" column is a factor of 31 levels indicating that the number of days represented are 31. 
+
+- The "hour" column is also a factor of 24 levels indicating the number of hours in a day. 
+
+We can now delete the timestamp column as we do not need it anymore and move the column "clicked_on_add" to the end(make it the last column in the data)
+
+```{r}
+# drop the timestamp column
+data$timestamp <- NULL
+colnames(data)
+
+# move the 'clicked_on_ad' column to the end
+data <- data[, c(1:8, 10:13, 9)]
+head(data)
+
+```
+
+
+# 8. Exploratory Data Analysis
+## 8.1 Univariate Data Analysis
+
+### Measures of Central Tendency
+#### 1. Mean
+Get the mean of each numerical column
+```{r}
+# here we use the dataframe "numericals" initially created when plotting boxplots, containing only numeric columns 
+colMeans(numericals)
+```
+
+#### 2. Median
+Get the median of each numerical column
+```{r}
+apply(numericals,2,median)
+```
+
+#### 3. Mode
+Get the mode of each numerical column
+
+**Daily time spent on site**
+
+```{r}
+# Create the function.
+getmode <- function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+}
+        
+# Calculate the mode using the user function.
+daily_time_on_site_mode <- getmode(data$daily_time_spent_on_site)
+print(daily_time_on_site_mode)
+```
+Most users spent at least 62.26 minutes on the site.
+
+**Age**
+```{r}
+age_mode <- getmode(data$age)
+print(age_mode)
+```
+A large number of users visiting the site are of 31 years of age
+
+**Area Income**
+```{r}
+area_income_mode <- getmode(data$area_income)
+print(area_income_mode)
+```
+Most users visiting the site have an area income of 28275.3 
+
+**Daily Internet Usage**
+```{r}
+daily_internet_usage_mode <- getmode(data$daily_internet_usage)
+print(daily_internet_usage_mode)
+```
+Daily internet usage for most users visiting the site is 167.22
+
+**Ad Topic Line**
+```{r}
+ad_topic_line_mode <- getmode(data$ad_topic_line)
+print(ad_topic_line_mode)
+```
+The most frequent Ad Topic line is "Cloned 5thgeneration orchestration"
+
+**City**
+```{r}
+city_mode <- getmode(data$city)
+print(city_mode)
+```
+The most popular city is "Lisamouth"
+
+**Gender**
+```{r}
+male_mode <- getmode(data$male)
+print(male_mode)
+```
+Most users visiting the site are female
+
+**Country**
+```{r}
+country_mode <- getmode(data$country)
+print(country_mode)
+```
+Most users visiting the site are from the country Czech Republic
+
+**Year**
+```{r}
+year_mode <- getmode(data$year)
+print(year_mode)
+```
+The year column is a factor of 1 level: year 2016. The data was collected in 2016. 
+
+**Month**
+```{r}
+month_mode <- getmode(data$month)
+print(month_mode)
+```
+The modal month is February.  
+
+**Day**
+```{r}
+day_mode <- getmode(data$day)
+print(day_mode)
+```
+Most users visited the site on the third day of the month. 
+
+**Hour**
+```{r}
+hour_mode <- getmode(data$hour)
+print(hour_mode)
+```
+The most popular hour that users visit the site is 0700hrs. 
+
+**Clicked on ad**
+```{r}
+clicked_on_ad_mode <- getmode(data$clicked_on_ad)
+print(clicked_on_ad_mode)
+```
+Most users visiting the site did not click on the ad
+
+### Measures of Dispersion
+1. Find the **minimum, maximum and quantiles** of the columns in the data. 
+```{r}
+summary(data)
+```
+
+2. **Range**
+
+**Daily Time Spent on the site**
+```{r}
+range(data$daily_time_spent_on_site)
+```
+The time spent by most users visiting the site is between 32.6-91.43 minutes
+
+**Age**
+```{r}
+range(data$age)
+```
+Users visiting the site are adults between ages 19-61.
+
+**Area Income**
+```{r}
+range(data$area_income)
+```
+Area incomes for users visiting the site is between 19000 and 79484
+
+**Daily Internet Usage**
+```{r}
+range(data$daily_internet_usage)
+```
+Users visiting the site use data bundles of ranges between 104.78-269.96 on a daily basis. 
+
+3. **Interquartile Range**
+
+The interquartile range also commonly known as IQR is the range between the 1st and 3rd quantiles. It is the difference between the two quantiles. 
+
+**Daily time spent on site**
+```{r}
+IQR(data$daily_time_spent_on_site)
+```
+**Age**
+```{r}
+IQR(data$age)
+```
+**Area Income**
+```{r}
+IQR(data$area_income)
+```
+**Daily Internet Usage**
+```{r}
+IQR(data$daily_internet_usage)
+```
+
+4. **Standard Deviation**
+
+Find the standard deviation of the various columns in the data
+
+```{r}
+ apply(numericals,2,sd)
+```
+5. **Variance**
+
+Find the variance of the numerical columns
+```{r}
+sapply(numericals, var)
+```
+6. **Kurtosis**
+
+Find the kurtosis of continuos numerical columns in the data
+
+**Daily time spent on site**
+```{r}
+library(e1071)
+kurtosis(numericals$daily_time_spent_on_site)
+```
+The kurtosis for this variable is less than 3 implying that the distribution of this variable is platykurtic. This means that there are few to no outliers which we have observed above when dealing with outliers. 
+
+**Age**
+```{r}
+kurtosis(numericals$age)
+```
+The distribution is platykurtic implying the existence of few to no outliers.
+
+**Area Income**
+```{r}
+kurtosis(numericals$area_income)
+```
+A kurtosis value of 2.63 indicates that the distribution is platykurtic although very close to being mesokurtic. It exhibits presence of outliers as observed above from the boxplots. 
+
+**Daily Internet Usage**
+```{r}
+kurtosis(numericals$daily_internet_usage)
+```
+The distribution is platykurtic.
+
+**Gender**
+```{r}
+kurtosis(numericals$male)
+```
+
+**Clicked on ad**
+```{r}
+kurtosis(numericals$clicked_on_ad)
+```
+
+7. **Skewness**
+
+Find the skewness of all continuous numerical columns
+
+**Daily time spent on site**
+```{r}
+library(e1071)
+skewness(data$daily_time_spent_on_site)
+```
+This proves that this variable is slightly negatively skewed(the distribution is skewed to the left). 
+
+**Age**
+```{r}
+skewness(data$age)
+```
+This skewness value implies that the distribution is almost fairly symmetrical
+
+**Area Income**
+```{r}
+skewness(data$area_income)
+```
+The distribution is negatively skewed.
+
+**Daily Internet Usage**
+```{r}
+skewness(data$daily_internet_usage)
+```
+The distribution is negatively skewed but by a very small value close to 0.
+
+The skewness of the various numerical columns can be observed by checking the distribution of the data using histograms.
+
+
+```{r}
+#colkurtosis(numericals)
+
+#colskewness(numericals, pvalue = FALSE)
+```
+
+### Histograms
+```{r}
+par(mfrow=c(2, 4))
+for (i in 1:length(numericals)) {
+        hist(numericals[,i], main=names(numericals[i]))
+}
+```
+
+## 8.2 Bivariate and Multivariate Analysis
+
+We will investigate the relationship between the target variable("clicked on ad") and the other columns
+
+```{r}
+# how many males and females clicked on ads
+gender_ad <- table(data$clicked_on_ad, data$male)
+names(dimnames(gender_ad)) <- c("Clicked on Ad?", "Male")
+gender_ad
+```
+The data is not unbalanced. The number of males and females who did not click on an ad are equal. However, more females clicked on the ads compared to males but only by a smaller number
+
+```{r}
+# ad clicked per month
+month_ad <- table(data$month, data$clicked_on_ad)
+names(dimnames(month_ad)) <- c("Month", "Clicked on Ad?")
+month_ad
+```
+We can see that February reports the highest number of ads clicked and July the least.
+
+```{r}
+# ad clicked per day
+day_ad <- table(data$day, data$clicked_on_ad)
+names(dimnames(day_ad)) <- c("Day", "Clicked on Ad?")
+day_ad
+```
+The 3rd day of the month reports the highest record of users clicking ads while the 31st day reports the lowest number of visitors to the site. 
+
+```{r}
+# ad clicked per hour
+hour_ad <- table(data$hour, data$clicked_on_ad)
+names(dimnames(hour_ad)) <- c("Hour", "Clicked on Ad?")
+hour_ad
+
+```
+At 9am, most users clicked on the ad while at 10am very few users clicked on the ads. It could be that at 10am users are so engrossed in their daily work. 
+
+```{r}
+# ad clicked per country
+country_ad <- table(data$country, data$clicked_on_ad)
+names(dimnames(country_ad)) <- c("Country", "Clicked on Ad")
+country_ad
+
+```
+The highest number of users that clicked on the ads from a country is 7 from the countries: Turkey, Ethiopia, Australia. For Ethiopia, all users that visited the site clicked on the ads.
+
+```{r}
+# ad clicked per city
+city_ads <- table(data$city, data$clicked_on_ad)
+names(dimnames(city_ads)) <- c("City", "Clicked on Ad")
+city_ads
+```
+Most cities have at least 1 or 0 clicks on ads. Only a few cities such as Lake David, Lake James, Lisamouth have 2 clicks on ads. 
+
+### Scatterplots
+For continuos numerical columns, we will make scatter plots to establish the relationships between the variables. 
+
+**Daily time spent versus ads being clicked**
+```{r}
+# scatter plot of daily time spent versus ad being clicked
+plot(data$daily_time_spent_on_site, data$clicked_on_ad, ylab = "Clicked on Ad", xlab = "Daily Time Spent on site")
+```
+
+Users that clicked on the ads are clustered between time 2-65minutes, thereafter, the scatter begins to get dispersed. Users who spent more time on the site did not click on the ad.
+
+**Age versus ad being clicked**
+```{r}
+# age versus ad being clicked
+plot(data$age, data$clicked_on_ad, ylab = "Clicked on Ad", xlab = "Age")
+```
+
+The age of a user is not significant to determining whether they will click an ad or not since all users from ages 18 to 60 clicked on the ad. It is notable that older users did click on the ads. This includes ages from 54 and above. It could be because they have all the time to do so as most of them are probably retired. 
+
+**Area income versus ad being clicked**
+```{r}
+# area income versus ad being clicked
+plot(data$area_income, data$clicked_on_ad, ylab = "Clicked on Ad", xlab = "Area Income")
+```
+
+All users visiting the site and with a low area income clicked on the ads. This includes users with income below 33000. 
+
+**Daily Internet Usage versus ads being clicked**
+```{r}
+# daily internet usage versus ad being clicked
+plot(data$daily_internet_usage, data$clicked_on_ad, ylab = "Clicked on Ad", xlab = "Daily Internet Usage")
+```
+
+Users with a low daily internet usage clicked on the ads. These are users with daily internet usage below 150mbs of data. We expect a similar trend on the daily internet usage and daily time spent on the site. We can make a plot to see this relationship.
+
+**Daily Internet Usage versus daily time spent on the site**
+```{r}
+# daily internet usage versus daily time spent on site
+plot(data$daily_internet_usage, data$daily_time_spent_on_site, ylab = "Daily Time Spent on Site", xlab = "Daily Internet Usage")
+```
+
+There are clusters concentrated at the low left and upper right of the plot. Most users with a low data bundle usage per day spent less time on the site while users who spent more time on the site had more daily data bundles to use. 
+
+### Correlation Matrix
+Find the correlations of the numerical columns and make a correlation matrix plot
+
+```{r}
+# find the correlations and round them off to 2 decimal places
+res <- round(cor(numericals), 2)
+# round(res, 2)
+res
+```
+
+
+```{r}
+library(corrplot)
+corrplot(res, type = "full", order = "hclust", 
+         tl.col = "black", tl.srt = 45)
+```
+
+- There is  positive correlation between daily time spent on site and daily internet usage. This is accustomed to the fact that more data usage equals to more time spent on the internet which equals to the time spent on the site by a user. 
+
+- There is a negative correlation between daily time spent on site, daily internet used and whether a user clicked on ad.
+
+- There is a slight correlation of 0.49 between age and whether or not a user clicked on ad.
+
+- There is a slight negative correlation of -0.48 between area income and whether or not a user clicked on ad.
+
+- The gender column does not exhibit strong or noticable relationships with the other variables. 
+
+# 9. Conclusion
+The results obtained from the EDA process will be used to make conclusions: 
+
+- The dataset was already slightly biased on the gender. There were more women than men visiting the site hence it more females than males clicked on the ads. 
+
+- Users who spent less time online were more likely to click on the ad than people who spent more time. As observed, these users also have a low daily internet usage. 
+
+- People with lower area incomes clicked more on the ad than people with higher area incomes.
+
+- The month of February and the 3rd days of the month were prime times for ad clicking. For the 31st days and the month of July, not so much.
+
+- Prime times for ad clicking is at 9am in the morning but this gets lower as it gets to 10am which registered low number of ad clicks. 
+
+# 10. Recommendations
+The target audience for the enterpreneur is:
+
+- Users with low income
+
+- Users who spend low on daily internet
+
+The target time for advertising the course and displaying ads is at 9am.
+
+The entrepreneur can customize her ads in a way that she gets the attention of users visiting the site in the morning. She can also customize her ads to attract more users including those with a higher income. 
+
+She can customize her ads on the online cryptography course by reducing the price. It could be that few users are clicking on the ad because the course is highly priced. Low priced(affordable) products are relatively attractive to more users, which could mean more traffic to the site. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
