@@ -3,18 +3,19 @@ title: "Advertising IP"
 author: "Jenipher Mawia"
 date: "10/29/2020"
 output:
-  word_document: default
   html_document: default
+  word_document: default
   pdf_document: default
 ---
 # 1. Defining the question
 
-**Perform extensive data cleaning and Exploratory Data Analysis on the following [data](http://bit.ly/IPAdvertisingData) and provide relevant conclusion and recommendation**
+**Perform extensive data cleaning and Exploratory Data Analysis on the following [data](http://bit.ly/IPAdvertisingData) and provide relevant conclusion and recommendation. Also build a model using supervised learning algorithms to predict whether a user will  click on the ad or not**
 
 ##    1.1 Specifying the question
 - Find and deal with outliers, anomalies, and missing data within the dataset.
 - Perform  univariate and bivariate analysis.
 - From your insights provide a conclusion and recommendation.
+- Build a supervised learning model to make the prediction
 
 # 2. Defining the metrics for success
 This project will be considered a success if:
@@ -40,7 +41,7 @@ The following is the order in which I went about this project:
 # 5. Data Understanding
 ## Reading the data
 ```{r}
-advertising <- read.csv("advertising.csv")
+advertising <- read.csv("http://bit.ly/IPAdvertisingData")
 ```
 
 ## Checking the data
@@ -692,6 +693,144 @@ corrplot(res, type = "full", order = "hclust",
 
 - The gender column does not exhibit strong or noticable relationships with the other variables. 
 
+# 9. Implementing the Solution
+
+## Modeling
+
+**Selecting our features**
+
+We will select only numerical variables from the data to use for modelling
+
+
+
+```{r}
+
+new_data <- data[, c(1,2,3,4,7,10,11,12,13)]
+colnames(new_data)
+```
+
+Then convert categorical features that are factors to numeric variables
+
+```{r}
+# make datatype conversions
+new_data$male <- as.numeric(new_data$male)
+new_data$month <- as.numeric(new_data$month)
+new_data$day <- as.numeric(new_data$day)
+new_data$hour <- as.numeric(new_data$hour)
+new_data$clicked_on_ad <- as.numeric(new_data$clicked_on_ad)
+
+# check the data types
+str(new_data)
+
+```
+
+**Normalizing the data**
+
+```{r}
+library(caret)
+# Creating a random number equal 80% of total number of rows
+ran <- sample(1:nrow(new_data),0.8 * nrow(new_data))
+
+# the normalization function is created
+normalize <- function(x){
+  return ((x-min(x)) / (max(x)-min(x)))
+} 
+# Normalization function is applied to the dataframe
+newdata_normalized <- as.data.frame(lapply(new_data[, c(1,2,3,4,5,6,7,8)],normalize))
+head(newdata_normalized)
+```
+
+**Splitting data into training and testing sets**
+
+```{r}
+
+# The training dataset extracted
+clicked_train <- newdata_normalized[ran,]
+ 
+# The test dataset extracted
+clicked_test <- newdata_normalized[-ran,]
+
+# training target
+train_target <- as.factor(new_data[ran,9])
+
+#testing target
+test_target <- as.factor(new_data[-ran,9])
+```
+
+**Modeling with K-Nearest Neighbors**
+
+```{r}
+#load libraries and model using knn
+library(class)
+model_knn <- knn(clicked_train,clicked_test,cl=train_target,k=3)
+```
+
+**Model evaluation**
+
+```{r}
+# Creating the confusion matrix
+tb <- table(model_knn,test_target)
+tb
+ 
+# Checking the accuracy
+accuracy <- function(x){sum(diag(x)/(sum(rowSums(x)))) * 100}
+accuracy(tb)
+```
+
+Our model has performed quite well with an accuracy of 95.5% and a few misclassification errors in the confusion matrix. 
+ 
+# Challenging the solution
+
+We can model using SVM to see how the model will perform and compare the results with the KNN model. 
+
+**Split data into training and test sets(80:20 ratio)**
+
+```{r}
+intrain <- createDataPartition(y = new_data$clicked_on_ad, p= 0.8, list = FALSE)
+training <- new_data[intrain,]
+testing <- new_data[-intrain,]
+```
+
+The next step here is to build a suitable SVM model for the predicting whether a user visiting the site will click on the ad. 
+
+**Modelling using SVM**
+
+```{r}
+# load libraries
+library(rpart)
+library(kernlab)
+
+# convert outcome/target variable to factor so that we perfom classification
+training$clicked_on_ad <- as.factor(training$clicked_on_ad)
+
+
+#modeling
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 3)
+
+svm_Linear <- train(clicked_on_ad ~ ., 
+                    data = training, 
+                    method = "svmLinear", 
+                    trControl=trctrl, 
+                    preProcess = c("center", "scale"), 
+                    tuneLength = 10)
+
+# check the results of the SVM model
+svm_Linear
+```
+
+**Model Evaluation**
+```{r}
+# predicting
+test_pred <- predict(svm_Linear, newdata = testing)
+
+# print confusion matrix
+confusionMatrix(table(test_pred, testing$clicked_on_ad))
+```
+
+The accuracy of the model is 96% and with a few misclassification errors in the confusion matrix. 
+
+This value is a higher than the KNN model but only by a small percentage. We can therefore conclude that the SVM model is better than the KNN model. 
+
 # 9. Conclusion
 The results obtained from the EDA process will be used to make conclusions: 
 
@@ -717,6 +856,8 @@ The target time for advertising the course and displaying ads is at 9am.
 The entrepreneur can customize her ads in a way that she gets the attention of users visiting the site in the morning. She can also customize her ads to attract more users including those with a higher income. 
 
 She can customize her ads on the online cryptography course by reducing the price. It could be that few users are clicking on the ad because the course is highly priced. Low priced(affordable) products are relatively attractive to more users, which could mean more traffic to the site. 
+
+Use the SVM model to predict whether a site visitor will click on the ad or not since it performs better than the KNN model. 
 
 
 
