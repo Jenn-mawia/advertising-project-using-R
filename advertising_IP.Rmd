@@ -3,8 +3,8 @@ title: "Advertising IP"
 author: "Jenipher Mawia"
 date: "10/29/2020"
 output:
-  html_document: default
   word_document: default
+  html_document: default
   pdf_document: default
 ---
 # 1. Defining the question
@@ -35,6 +35,10 @@ The following is the order in which I went about this project:
 - Data cleaning procedures (handling null values,outliers, anomalies)
 
 - Exploratory data analysis (Univariate, Bivariate and Multivariate analyses)
+
+- Implementing the solution
+
+- Challenging the solution
 
 - Conclusion and recommendation
 
@@ -831,7 +835,7 @@ The accuracy of the model is 96% and with a few misclassification errors in the 
 
 This value is a higher than the KNN model but only by a small percentage. We can therefore conclude that the SVM model is better than the KNN model. 
 
-# 9. Conclusion
+# 10. Conclusion
 The results obtained from the EDA process will be used to make conclusions: 
 
 - The dataset was already slightly biased on the gender. There were more women than men visiting the site hence it more females than males clicked on the ads. 
@@ -844,7 +848,7 @@ The results obtained from the EDA process will be used to make conclusions:
 
 - Prime times for ad clicking is at 9am in the morning but this gets lower as it gets to 10am which registered low number of ad clicks. 
 
-# 10. Recommendations
+# 11. Recommendations
 The target audience for the enterpreneur is:
 
 - Users with low income
